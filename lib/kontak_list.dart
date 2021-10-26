@@ -17,7 +17,7 @@ class _KontakListState extends State<KontakList> {
     super.initState();
     bacaData();  
   }
-
+ 
   void bacaData()async{
       final db = await DBHelper.db();
       final ls = await db.rawQuery('SELECT * FROM kontak');

@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:kontak/db_helper.dart';
 import 'package:kontak/kontak_list.dart';
 
@@ -23,6 +28,40 @@ class _KontakFormState extends State<KontakForm> {
     gender = data?['gender'] ?? '';
   }
 
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    if(txtAlamat.value.text == ''){
+        getAlamatGPS().then((s){
+          txtAlamat.text = s;
+        });
+    }
+  }
+
+  Future<bool> cekIzinLokasi()async{
+    var izin = await Geolocator.checkPermission();
+     if(izin == LocationPermission.always || izin == LocationPermission.whileInUse){
+        return true;
+     }else{
+        izin = await Geolocator.requestPermission();
+        return izin == LocationPermission.always || izin == LocationPermission.whileInUse;
+     }
+  }
+
+  Future<String> getAlamatGPS()async{
+     final izin = await cekIzinLokasi();
+     if( izin ){
+        final position = await Geolocator.getCurrentPosition();
+        final place = await GeocodingPlatform.instance
+                            .placemarkFromCoordinates(position.latitude, position.longitude);
+        final f = place.first;
+        return '${f.street} ${f.subLocality} ${f.locality} ${f.administrativeArea} ${f.country}'; 
+
+     }
+     return '';
+  }
+
   void simpanData()async{
     setState((){ isLoading = true; });
       
@@ -31,7 +70,7 @@ class _KontakFormState extends State<KontakForm> {
         'id': lID ,
         'nama' : txtNama.value.text,
         'gender': gender,
-        'alamat': txtAlamat.value.text
+        'alamat': txtAlamat.value.text,
       };
     print('simpan Data : $data');
     final db = await DBHelper.db();
@@ -115,6 +154,8 @@ class _KontakFormState extends State<KontakForm> {
                           ),
                           TextFormField(
                             controller: txtAlamat,
+                            keyboardType: TextInputType.multiline,
+                            maxLines:3,
                             decoration:const InputDecoration(
                               label: Text('Alamat')
                             )
